@@ -24,7 +24,7 @@ export async function sendMSG<ReceiveType>(msg: object, newConn?: Deno.Conn, kil
 }
 
 async function read(conn: Deno.Conn) {
-    const buf = new Uint8Array(1024);
+    const buf = new Uint8Array(1024 * 32);
     const n = await conn.read(buf);
 
     if (!n) {

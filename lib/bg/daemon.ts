@@ -87,7 +87,11 @@ async function handleMSG(msg: IPCMsg, conn: Deno.Conn) {
             }
         }
     } catch (e) {
-        await writeLogsToFile("Error in `handleMSG()` function", e);
+        if (!(e instanceof Error)) return;
+        
+        await writeLogsToFile("Error at handleMSG();",
+        "Error Name:> " + e.name, "Error Message:> " + e.message,
+        "Cause?:> " + String(e.cause), "Stack Trace:> " + e.stack);
     }
 
     try {

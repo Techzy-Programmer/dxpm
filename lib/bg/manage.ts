@@ -1,8 +1,7 @@
 import { EventEmitter, get, isAbsolute, resolve } from "../../deps.ts";
 import { TaskDetail, ProcDetail } from "../types.ts";
-import { MonitorProc } from "./monitor.ts";
-import { delay } from "../helper/utility.ts";
 import { SpawnCmd } from "../helper/ipc.ts";
+import { MonitorProc } from "./monitor.ts";
 import { AppConfig } from "../types.ts";
 import { MiniDB } from "./mini-db.ts";
 import { AppData } from "../types.ts";
@@ -39,7 +38,8 @@ async function getAppData(id: string, index: number) {
     return appData.value;
 }
 
-async function isPIDActive(pid: number) {
+// Deprecated function
+async function _isPIDActive(pid: number) {
     const proc = await get(pid);
     if (!proc) return false;
 
@@ -71,28 +71,19 @@ function buildAppsConfig(conf: SpawnCmd) {
     return appConfigs;
 }
 
-async function ensureStopped(prevState: string, pid: number) {
-    if (prevState !== "running" || !await isPIDActive(pid)) return true;
+function ensureStopped(prevState: string, pid: number) {
+    if (prevState !== "running") return true;
     const prevProc = MiniDB.getPIDProc(pid);
-    let died = false;
+    if (!prevProc) return true;
 
-    if (!prevProc) {
-        // Directly initiate the kill request
-        Deno.kill(pid);
-    }
-    else {
+    try {
         MiniDB.removePID(pid);
         prevProc.kill();
+    } catch {
+        // Ignore
     }
 
-    // Wait for the process to die
-    for (let i = 0; i < 10; i++) {
-        await delay(10); // default wait 10ms
-        died = !(await isPIDActive(pid));
-        if (died) break;
-    }
-
-    return died;
+    return true;
 }
 
 async function discardRedundantInstances(id: string, allowedInstances: number, remove: boolean = true) {
@@ -100,6 +91,7 @@ async function discardRedundantInstances(id: string, allowedInstances: number, r
         prefix: ["scripts", "instance", id]
     });
 
+    const atomicOps = kv.atomic();
     MiniDB.removeMonitor(id);
     let i = 0;
 
@@ -108,18 +100,33 @@ async function discardRedundantInstances(id: string, allowedInstances: number, r
             i++; continue;
         }
 
-        if (remove) await kv.delete(["scripts", "instance", id, i.toString()]);
-        await ensureStopped(value.status, value.pid);
+        if (remove) atomicOps.delete(["scripts", "instance", id, i.toString()]);
+        ensureStopped(value.status, value.pid);
 
         if (!remove) {
             value.pid = NaN;
             value.stop = new Date();
             value.status = "stopped";
-            await kv.set(["scripts", "instance", id, i.toString()], value);
+            atomicOps.set(["scripts", "instance", id, i.toString()], value);
         }
         
         i++;
     }
+
+    await atomicOps.commit();
+}
+
+async function modifyActiveScripts(item: string, add: boolean) {
+    const { value: allScripts } = await kv.get<string[]>(["scripts", "active"]);
+    const scriptsSet = new Set(allScripts);
+    const bfSize = scriptsSet.size;
+    
+    if (add) scriptsSet.add(item);
+    else scriptsSet.delete(item);
+    
+    if (bfSize !== scriptsSet.size)
+        await kv.set(["scripts", "active"],
+            Array.from(scriptsSet));
 }
 
 // #endregion
@@ -128,25 +135,14 @@ async function discardRedundantInstances(id: string, allowedInstances: number, r
 
 export function abort() {
     const allPIDs = MiniDB.getAllPIDs();
-
-    for (const pid of allPIDs) {
-        const proc = MiniDB.getPIDProc(pid);
-        if (!proc) continue;
-
-        try {
-            MiniDB.removePID(pid);
-            proc.kill();
-        } catch {
-            continue;
-        }
-    }
+    for (const pid of allPIDs) ensureStopped("running", pid);
 }
 
 export async function processPlayPauseEjectCmd(id: string, action: "pause" | "play" | "eject") {
     const { value } = await kv.get<AppConfig>(["scripts", "main", id]);
     const key = action === "pause" ? "paused" :
         action === "eject" ? "ejected" : "played";
-    
+
     if (!value) return ({
         [key]: false,
         found: false
@@ -165,6 +161,7 @@ export async function processPlayPauseEjectCmd(id: string, action: "pause" | "pl
         }
 
         case "eject":
+            await modifyActiveScripts(id, false);
             await discardRedundantInstances(id, 0);
             await kv.delete(["scripts", "main", id]);
             pausedState.delete(id);
@@ -198,7 +195,9 @@ async function spinUp(configs: AppConfig[]): Promise<TaskDetail> {
         const startPort = cluster?.startPort || Infinity;
         const iter = cluster?.instances || 1;
         config.start = new Date();
-        
+
+        modifyActiveScripts(id, true).then();
+
         const bootConfig: BootConfig = {
             permissions: permissions || [],
             restartDelaySec,
@@ -225,7 +224,7 @@ async function spinUp(configs: AppConfig[]): Promise<TaskDetail> {
             }
 
             appData.port = startPort + i; // Reset the environment variable "PORT"
-            const [success, pid] = await bootApp(id, appData, bootConfig, i);
+            const [success, pid] = bootApp(id, appData, bootConfig, i);
 
             procDetail.push({
                 status: success ? "running" : "errored",
@@ -245,7 +244,7 @@ async function spinUp(configs: AppConfig[]): Promise<TaskDetail> {
     return resp;
 }
 
-async function bootApp(id: string, app: AppData, bootConfig: BootConfig, index = 0, uid = 0): Promise<[boolean, number]> {
+function bootApp(id: string, app: AppData, bootConfig: BootConfig, index = 0, uid = 0): [boolean, number] {
     const { permissions, env, scriptPath, cwd, autoStart, restartDelaySec } = bootConfig;
     const key = `${id}-${index}`;
     const { port, pid } = app;
@@ -266,7 +265,7 @@ async function bootApp(id: string, app: AppData, bootConfig: BootConfig, index =
     if (Number.isFinite(port))
         env["PORT"] = port.toString();
 
-    if (!await ensureStopped(app.status, pid))
+    if (!ensureStopped(app.status, pid))
         return [false, -1];
     
     const bootCmd = new Deno.Command("deno", {
