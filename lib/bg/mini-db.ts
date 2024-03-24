@@ -15,8 +15,12 @@ export class MiniDB {
         this.pidDB.set(key, value);
     }
 
-    static getPID(key: number) {
+    static getPIDProc(key: number) {
         return this.pidDB.get(key);
+    }
+
+    static getAllPIDs() {
+        return [...this.pidDB.keys()];
     }
 
     static removePID(key: number) {

@@ -19,9 +19,14 @@ export type ReadCmd = {
     script: string;
 }
 
+export type SelfKillCmd = {
+    action: "kill";
+}
+
 export type IPCMsg =
     SpawnCmd | ReadCmd
-    | PlayPauseEjectCmd;
+    | PlayPauseEjectCmd
+    | SelfKillCmd;
 
 export {
     IPC_HOST,

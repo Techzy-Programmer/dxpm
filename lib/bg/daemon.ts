@@ -1,3 +1,4 @@
+import { abort } from "./manage.ts";
 import { LogData } from "../types.ts";
 import { MiniDB } from "./mini-db.ts";
 import { sendMSG } from "../helper/network.ts";
@@ -79,9 +80,14 @@ async function handleMSG(msg: IPCMsg, conn: Deno.Conn) {
                 logMonitor.on("log", listner);
                 return; // Don't send response directly
             }
+
+            case "kill": {
+                abort(); // Code Red
+                Deno.exit(0);
+            }
         }
     } catch (e) {
-        writeLogsToFile("Error in `handleMSG()` function", e);
+        await writeLogsToFile("Error in `handleMSG()` function", e);
     }
 
     try {

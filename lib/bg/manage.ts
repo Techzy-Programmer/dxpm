@@ -73,7 +73,7 @@ function buildAppsConfig(conf: SpawnCmd) {
 
 async function ensureStopped(prevState: string, pid: number) {
     if (prevState !== "running" || !await isPIDActive(pid)) return true;
-    const prevProc = MiniDB.getPID(pid);
+    const prevProc = MiniDB.getPIDProc(pid);
     let died = false;
 
     if (!prevProc) {
@@ -125,6 +125,22 @@ async function discardRedundantInstances(id: string, allowedInstances: number, r
 // #endregion
 
 // #region Worker Functions
+
+export function abort() {
+    const allPIDs = MiniDB.getAllPIDs();
+
+    for (const pid of allPIDs) {
+        const proc = MiniDB.getPIDProc(pid);
+        if (!proc) continue;
+
+        try {
+            MiniDB.removePID(pid);
+            proc.kill();
+        } catch {
+            continue;
+        }
+    }
+}
 
 export async function processPlayPauseEjectCmd(id: string, action: "pause" | "play" | "eject") {
     const { value } = await kv.get<AppConfig>(["scripts", "main", id]);
@@ -275,7 +291,7 @@ async function bootApp(id: string, app: AppData, bootConfig: BootConfig, index =
     kv.set(["scripts", "instance", id, index.toString()], setOpData).then();
 
     appProc.status.then(async ({ success }) => {
-        if (!MiniDB.getPID(appProc.pid)) return;
+        if (!MiniDB.getPIDProc(appProc.pid)) return;
         else MiniDB.removePID(appProc.pid);
 
         if (MiniDB.getRID(key) !== uid) return;
