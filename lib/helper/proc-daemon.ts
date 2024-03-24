@@ -1,7 +1,7 @@
-import { dirname, fromFileUrl, exists } from "../../deps.ts";
 import { elog, ilog, slog, wlog } from "./logs.ts";
 import { getGHRawURL } from "../../app.meta.ts";
 import { getAppDataDir } from "../local-db.ts";
+import { exists } from "../../deps.ts";
 import { delay } from "./utility.ts";
 
 async function ensureDaemonizer() {
@@ -38,15 +38,11 @@ export async function downloadDaemonizer(toPth: string) {
         try {
             await response.body
                 ?.pipeTo(dmnzFile.writable);
-            
         } catch {
-            dmnzFile.close();
-            return false;
-        } finally {
-            dmnzFile.close();
+            return false;   
         }
 
-        slog("Daemonizer downloaded.\n");
+        slog("Daemonizer downloaded.");
         return true;
     } catch {
         return null;
@@ -54,8 +50,7 @@ export async function downloadDaemonizer(toPth: string) {
 }
 
 export async function launchDaemonProc() {
-    const daemonPath = await Deno.realPath(dirname(
-        fromFileUrl(import.meta.url)) + "/../bg/daemon.ts");
+    const daemonPath = "https://deno.land/x/dxpm/lib/bg/daemon.ts";
     ilog("Starting daemon process...");
 
     if (Deno.build.os === "windows") {

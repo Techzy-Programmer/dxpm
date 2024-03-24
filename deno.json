@@ -1,6 +1,6 @@
 {
     "tasks": {
-        "daemon": "deno run -A --unstable-kv ./lib/bg/daemon.ts",
+        "daemon": "deno run -A --unstable-kv https://deno.land/x/dxpm/lib/bg/daemon.ts",
         "test": "deno test"
     }
 }
