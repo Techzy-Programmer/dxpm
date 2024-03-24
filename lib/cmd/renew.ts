@@ -1,9 +1,10 @@
 import { Command } from "../../deps.ts";
 
 /**
- * Steps:
+ * [Steps]
  * Cache dxpm.ts from deno.land/x/dxpm
  * Cache daemon.ts from deno.land/x/dxpm
+ * Send kill cmd to running instance of daemon.ts
  * Run `deno install` with required flags and args
 */
 
