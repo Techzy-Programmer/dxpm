@@ -9,7 +9,7 @@ const configs = ["-fr", "-A", "--unstable-kv", "-n", "dxpm"];
 console.log("Caching required modules...");
 await reloadAndCacheModule(daemonUrl);
 
-const installer = new Deno.Command("Deno", {
+const installer = new Deno.Command("deno", {
     args: ["install", ...configs, "--root", installAt, dxpmUrl],
 }).spawn();
 
