@@ -1,7 +1,7 @@
 import { printProcessData } from "../helper/logs.ts";
 import { parseConfig } from "../helper/parser.ts";
 import { sendMSG } from "../helper/network.ts";
-import { wlog, elog } from "../helper/logs.ts";
+import { ilog, elog } from "../helper/logs.ts";
 import { SpawnCmd } from "../helper/ipc.ts";
 import { TaskDetail } from "../types.ts";
 import { Command } from "../../deps.ts";
@@ -20,7 +20,7 @@ async function goHandler(config: string | undefined) {
         cwd: Deno.cwd()
     }
 
-    wlog("Script execution initiated");
+    ilog("Script execution initiated");
     const response = await sendMSG<TaskDetail>(spawnCMD);
     
     if (response === "Dead") {

@@ -2,23 +2,23 @@ import { Cell, RowType, Table, TableType, colors } from "../../deps.ts";
 import { TaskDetail, ProcDetail } from "../types.ts";
 
 export function elog(emsg: string): void {
-    console.log(colors.brightRed(emsg));
+    console.log(colors.brightRed("[ERROR]"), emsg);
 }
 
 export function wlog(wmsg: string): void {
-    console.log(colors.brightYellow(wmsg));
+    console.log(colors.brightYellow("[WARN]"), wmsg);
 }
 
 export function ilog(imsg: string): void {
-    console.log(colors.brightCyan(imsg));
+    console.log(colors.brightCyan("[INFO]"), imsg);
 }
 
 export function slog(smsg: string): void {
-    console.log(colors.brightGreen(smsg));
+    console.log(colors.brightGreen("[OK]"), smsg);
 }
 
 export function log(msg: string): void {
-    console.log(msg);    
+    console.log(msg);
 }
 
 export function printProcessData(tasksDet: TaskDetail) {

@@ -1,13 +1,11 @@
+import { playCommand, pauseCommand, ejectCommand } from "./ppe.ts";
 import { launchDaemonProc } from "../helper/proc-daemon.ts";
 import { Command, isPortAvailable } from "../../deps.ts";
 import { IPC_HOST, IPC_PORT } from "../helper/ipc.ts";
 import { VERSION } from "../../app.meta.ts";
 import { elog } from "../helper/logs.ts";
-import ejectCommand from "./eject.ts";
 import renewCommand from "./renew.ts";
-import pauseCommand from "./pause.ts";
 import autoCommand from "./auto.ts";
-import playCommand from "./play.ts";
 import showCommand from "./show.ts";
 import spyCommand from "./spy.ts";
 import goCommand from "./go.ts";

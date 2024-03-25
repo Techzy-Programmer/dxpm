@@ -1,6 +1,7 @@
 import { LogData } from '../types.ts';
 import { colors } from "../../deps.ts";
 import { Command } from "../../deps.ts";
+import { askFromKV } from "../helper/utility.ts";
 import { IPC_PORT, ReadCmd } from "../helper/ipc.ts";
 import { elog, slog, ilog, wlog } from "../helper/logs.ts";
 
@@ -11,8 +12,8 @@ const spyCommand = new Command()
 
 async function spyHandler(script: string | undefined) {
     if (!script) {
-        elog("Please provide script id to perform log-watch operation!");
-        return;
+        script = await askFromKV(`Select a script to spy (monitor-logs):`);
+        if (!script) return wlog(`No scripts avaliable to start spy (log-monitor) operation!`);
     }
 
     const spyCmd: ReadCmd = {
@@ -20,7 +21,7 @@ async function spyHandler(script: string | undefined) {
         script
     }
 
-    ilog("Starting script spy (log-watch)...\n");
+    ilog("Starting script spy (log-monitor)...\n");
 
     const conn = await Deno.connect({
         hostname: "127.0.0.1",
@@ -34,12 +35,12 @@ async function spyHandler(script: string | undefined) {
         conn.close();
     } catch { /* Ignore */ }
 
-    slog("Script spy (log-watch) completed.");
+    slog("\nScript spy (log-monitoring) completed.");
 }
 
 async function keepReading(conn: Deno.Conn) {
     while (true) {
-        const buf = new Uint8Array(1024);
+        const buf = new Uint8Array(1024 * 10);
         const n = await conn.read(buf);
 
         if (!n) {
@@ -48,7 +49,7 @@ async function keepReading(conn: Deno.Conn) {
         }
 
         const dataBuff = buf.subarray(0, n);
-        const data = new TextDecoder()
+        let data = new TextDecoder()
             .decode(dataBuff).trim();
         
         if (!data) {
@@ -57,24 +58,31 @@ async function keepReading(conn: Deno.Conn) {
         }
 
         try {
-            const logData: LogData = JSON.parse(data);
+            if (data.includes('"}{"isStdOut":'))
+                data = data.replaceAll('"}{"isStdOut":', '"},{"isStdOut":');
 
-            if ((logData as unknown as ({ notFound: boolean })).notFound) {
-                elog("Script not found or is not running!");
-                Deno.exit(1);
-            }
-            
-            const { pid, done, isStdOut, log } = logData;
-            const pidTxt = colors.gray(pid.toString());
-            
-            if (done) {
-                wlog(`Process with PID ${pid} exited!\n`);
-                continue;
-            }
+            // Explicitly convert to array of JSON objects
+            const logsData: LogData[] = JSON.parse(`[${data}]`);
 
-            const typeTxt = isStdOut ? colors.cyan.bold("[STD-OUT]") : colors.red.bold("[STD-ERR]");
-            console.log(`${pidTxt} ${typeTxt} ${colors.brightWhite(log)}`);
+            for (const logData of logsData) {
+                if ((logData as unknown as ({ notFound: boolean })).notFound) {
+                    elog("Script not found or is not running!");
+                    Deno.exit(1);
+                }
+                
+                const { pid, done, isStdOut, log } = logData;
+                const pidTxt = colors.gray(pid.toString());
+                
+                if (done) {
+                    wlog(`Process with PID ${pid} exited!\n`);
+                    continue;
+                }
+
+                const typeTxt = isStdOut ? colors.cyan.bold("[STD-OUT]") : colors.red.bold("[STD-ERR]");
+                console.log(`${pidTxt} ${typeTxt} ${colors.brightWhite(log)}`);
+            }
         } catch {
+            console.log(data);
             elog("[Internal Error] Invalid Response");
             Deno.exit(1);
         }
