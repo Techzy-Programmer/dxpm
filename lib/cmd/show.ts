@@ -6,7 +6,7 @@ import kv from "../local-db.ts";
 
 const showCommand = new Command()
     .description("Shows the status of apps & tasks managed by DXPM.")
-    .option("-s, --script <Id>", "Id of script corresponding to that provided in config file.")
+    .option("-s, --script <script-id:string>", "Id of the script corresponding to the one provided in the config file.")
     .action(({ script }) => showHandler(script));
 
 function getRunTime(start: Date, end: Date) {

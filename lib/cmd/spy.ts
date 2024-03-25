@@ -7,7 +7,7 @@ import { elog, slog, ilog, wlog } from "../helper/logs.ts";
 
 const spyCommand = new Command()
     .description("Read realtime logs from running scripts.")
-    .option("-s, --script <Id>", "Id of script corresponding to one provided in the config file.")
+    .option("-s, --script <script-id:string>", "Id of the script corresponding to one provided in the config file.")
     .action(({ script }) => spyHandler(script));
 
 async function spyHandler(script: string | undefined) {

@@ -17,18 +17,30 @@ if (await isPortAvailable({ port: IPC_PORT, hostname: IPC_HOST })) {
     }
 }
 
+let entryCmd: unknown;
+
 export async function entry(args: string[]): Promise<void> {
-    await new Command()
+    entryCmd = new Command()
         .noGlobals()
         .name("dxpm")
         .version(VERSION)
+        .action(() => entryHandler())
+        .description("DXPM (Deno eXtensible Package Manager) CLI")
+
         .command("go", goCommand)
         .command("show", showCommand)
+        
         .command("play", playCommand)
         .command("pause", pauseCommand)
         .command("eject", ejectCommand)
+        
         .command("spy", spyCommand)
         .command("auto", autoCommand)
-        .command("renew", renewCommand)
-        .parse(args);
+        .command("renew", renewCommand);
+    
+    await (entryCmd as Command).parse(args);
+}
+
+function entryHandler() {
+    (entryCmd as Command).showHelp();
 }

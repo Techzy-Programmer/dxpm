@@ -1,7 +1,7 @@
+import { dirname, exists, fromFileUrl } from "../../deps.ts";
 import { elog, ilog, slog, wlog } from "./logs.ts";
 import { getGHRawURL } from "../../app.meta.ts";
 import { getAppDataDir } from "../local-db.ts";
-import { dirname, exists, fromFileUrl } from "../../deps.ts";
 import { delay } from "./utility.ts";
 
 async function ensureDaemonizer() {
@@ -50,12 +50,11 @@ export async function downloadDaemonizer(toPth: string) {
 }
 
 export async function launchDaemonProc() {
-    const localDaemonPath = await Deno.realPath(dirname(fromFileUrl(import.meta.url)) + "/../bg/daemon.ts");
-    const remoteDaemonPath = "https://deno.land/x/dxpm/lib/bg/daemon.ts";
+    // This strategy help in the local development of DXPM
     const isRunningLocally = import.meta.url.startsWith("file://");
+    const daemonPath = !isRunningLocally ? "https://deno.land/x/dxpm/lib/bg/daemon.ts"
+        : await Deno.realPath(dirname(fromFileUrl(import.meta.url)) + "/../bg/daemon.ts");
 
-    // This strategy help in local development of DXPM
-    const daemonPath = isRunningLocally ? localDaemonPath : remoteDaemonPath;
     ilog("Starting daemon process...");
 
     if (Deno.build.os === "windows") {

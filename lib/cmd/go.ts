@@ -8,7 +8,7 @@ import { Command } from "../../deps.ts";
 
 const goCommand = new Command()
     .description("Starts all the apps configured in the config file.")
-    .option("-c, --config <config-file>", "Path to the config file")
+    .option("-c, --config <config-file:file>", "Path to the config file")
     .action(({ config }) => goHandler(config));
 
 async function goHandler(config: string | undefined) {    

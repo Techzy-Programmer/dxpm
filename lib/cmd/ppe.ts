@@ -7,8 +7,8 @@ import { PlayPauseEjectCmd } from "../helper/ipc.ts";
 
 // #region Commands Initialization
 
-const optTxt = "Id of script corresponding to one provided in the config file.";
-const optArg = "-s, --script <Id>";
+const optTxt = "Id of the script corresponding to one provided in the config file.";
+const optArg = "-s, --script <script-id:string>";
 
 const playCommand = new Command()
     .description("Re-starts the stopped scripts.").option(optArg, optTxt)
