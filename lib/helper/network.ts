@@ -28,8 +28,7 @@ async function read(conn: Deno.Conn) {
     const n = await conn.read(buf);
 
     if (!n) {
-        elog("Daemon process exited unexpectedly!");
-        Deno.exit(1);
+        throw new Error("Daemon process exited unexpectedly!");
     }
 
     const dataBuff = buf.subarray(0, n);
